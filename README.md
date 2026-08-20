@@ -1,0 +1,190 @@
+# Mini-Hermes — 从 Hermes 蒸馏最小 Agent 的两代实践
+
+> 本项目不做代码，只做**总览**：把两代"从 Hermes 剥离的最小 Agent"项目串成一条学习路线，讲清楚每一代蒸馏了什么、实现了什么、成就了什么。
+
+- **第一代** · [minimal-agent (mini-hermes-v1)](https://github.com/notfresh/mini-hermes-v1) — 单文件最小 Agent，验证"核心循环 5 行逻辑"
+- **第二代** · [minimal-agent-v2 (mini-hermes-v2)](https://github.com/notfresh/mini-hermes-v2) — 五模块拆分的教学级 Agent 框架，逐步补齐 Hermes 进阶机制
+
+---
+
+## 一、这两个项目解决什么问题（价值）
+
+**背景**：Hermes Agent 是一个 15 万行 Python 的生产级 Agent 框架，核心循环 `agent/conversation_loop.py` 就有 5194 行。直接读源码很容易迷失在并发、流式、回退链、上下文压缩等防御机制里，看不到本质。
+
+**做法（蒸馏）**：从 Hermes 核心执行流程中剥离出最小骨架——把 5194 行的核心循环压缩到 30 行，把防御逻辑逐层还原成可单独讲解的模块。每个教学模块都有一张对照表，精确指向 Hermes 源码的对应文件与函数。
+
+**做法（实现）**：不只是读，而是**自己动手实现一个最小可运行的 Agent**，用真实 LLM（DeepSeek 优先）跑通真实任务，验证蒸馏结论正确。
+
+**学习路径**：蒸馏（从复杂系统抽骨架）→ 对比（与生产代码逐行对照）→ 重建（自己实现并验证）——两条主线：
+
+| 主线 | V1 完成度 | V2 完成度 |
+|------|-----------|-----------|
+| 最小可用 Agent | ✅ 单文件跑通真实任务 | ✅ 五模块重构 |
+| 工具系统（@tool 注册） | ✅ 7 个内置工具 | ✅ 继承 + 守卫检查点 |
+| 技能框架（外置技能包） | ❌ | ✅ skills-framework 分支 |
+| 任务规划（Plan Mode） | ❌ | ✅ 软约束 V1 → 硬约束 V2 |
+| 权限控制（防越权） | ❌ | ✅ AgentIgnore 分支 |
+| 会话管理 / REPL | ❌ | ✅ session_manager + REPL |
+
+---
+
+## 二、第一代：minimal-agent（V1）
+
+🔗 GitHub：[https://github.com/notfresh/mini-hermes-v1](https://github.com/notfresh/mini-hermes-v1)（tag `v0.1`）
+
+### 一句话定位
+
+> **Agent = LLM + Tools + Loop**，核心循环就 5 行逻辑：
+
+```python
+while True:
+    response = llm(messages, tools)    # 把上下文发给模型
+    if response.tool_calls:            # 模型要调工具？
+        execute(response.tool_calls)    # 执行，结果回添
+        continue                       # 送回 LLM 继续
+    return response.content            # 纯文本回复 → 完成
+```
+
+### 项目形态
+
+```
+minimal-agent/
+├── minimal_agent.py    # 核心循环 + CLI 入口（~130 行）
+├── tools.py            # @tool 注册中心 + 7 个内置工具（~200 行）
+└── README.md
+```
+
+- 7 个内置工具：`read` / `write` / `ls` / `grep` / `find` / `head` / `bash`
+- DeepSeek 优先，支持 `--provider openai` 切换
+- `--verbose` 可看每一轮消息与 token 用量
+
+### 第一代成就
+
+1. **验证核心结论**：Agent 的本质就是"LLM ↔ Tools 循环"，5 行逻辑可以跑通真实任务（真实 API、真实工具调用）。
+2. **建立对照表**：教学版与 Hermes 生产版逐项对应——`@tool` 装饰器 ↔ `tools/registry.py`、`agent_loop()` ↔ `agent/conversation_loop.py::run_conversation`、`_execute_tool_call()` ↔ `agent/tool_executor.py`。这份对照是后续所有工作的地基。
+3. **明确"剥离了什么"**：串行执行 vs Hermes 并发 `_execute_tool_calls_concurrent`、无流式 vs `_interruptible_streaming_api_call`、无回退链 vs `_try_activate_fallback`——用"教学版没有的清单"反衬 Hermes 的工程复杂度。
+4. **产出 hard-vs-soft-mode 软/硬约束对比 demo**（后移入 V2 仓库，成为 Plan Mode 教学的起点）。
+5. **锁定 v0.1**：第一版教学用例正式冻结。
+
+---
+
+## 三、第二代：minimal-agent-v2（V2）
+
+🔗 GitHub：[https://github.com/notfresh/mini-hermes-v2](https://github.com/notfresh/mini-hermes-v2)（tag `v2.0`）
+
+### 一句话定位
+
+在 V1 基础上按**五模块拆分**重构：核心骨架保持 ~30 行，防御逻辑全部下沉到模块，然后沿 Hermes 进阶机制逐分支补齐能力。
+
+### 项目形态（12 个 .py）
+
+```
+minimal-agent-v2/
+├── conversation_loop.py   # ConversationLoop 骨架（~30 行）
+├── turn_context.py        # TurnContext：回合前准备（系统提示词/清洗/凭证预检）
+├── loop_controller.py     # LoopController：还继续吗？（轮数/预算/中断/grace）
+├── llm_client.py          # LLMClient：模型说什么？（重试/退避/错误分类）
+├── tool_runner.py         # ToolRunner：工具查找/解析/防御/回填（+ 守卫检查点）
+├── message_store.py       # MessageStore：消息增删改查/压缩
+├── session_manager.py     # 会话 CRUD + 生命周期 + 延迟持久化
+├── plan_mode.py           # PlanMode 状态机
+├── skill_registry.py      # 外部技能扫描 + bootstrap 检测
+├── agent_ignore.py        # AgentIgnore 路径权限校验
+├── tools.py / cli.py      # 内置工具 / CLI + REPL
+└── docs/                  # 设计文档体系（见下）
+```
+
+### 五模块各自回答的问题
+
+| 模块 | 回答的问题 |
+|------|-----------|
+| LoopController | "还继续吗？"（轮数/预算/中断/grace） |
+| LLMClient | "模型说什么？"（重试/退避/错误分类，调用方看不到） |
+| ToolRunner | "工具结果是什么？"（查找/解析/防御/回填） |
+| MessageStore | "消息放哪/太长怎么办？"（增删改查/压缩） |
+| TurnContext | "回合开始前准备什么？"（系统提示词/清洗/凭证预检） |
+
+### 与 Hermes 源码的对照
+
+| V2 模块 | Hermes 对应 |
+|---------|-------------|
+| `ConversationLoop`（骨架） | `agent/conversation_loop.py :: run_conversation`（5194 行） |
+| `TurnContext` | `agent/turn_context.py` + `agent/prompt_builder.py` |
+| `LoopController` | `agent/iteration_budget.py` + 循环退出条件 |
+| `LLMClient` | `agent/chat_completion_helpers.py`（重试/退避/错误分类） |
+| `ToolRunner` | `tools/registry.py` + `agent/tool_executor.py` |
+| `MessageStore` | 循环内 messages 操作（压缩/快照/持久化） |
+| `skill_registry` | `skills.external_dirs` + `skill_view` 工具 |
+
+### 分支演进史 —— 每一代（每个分支）的成就
+
+V2 用**分支当版本线**，一条分支 = 一个进阶能力，拓扑：`main → skills-framework → plan-mode-v1 → plan-mode-v2 → agent-ignore`。
+
+**① main — 五模块拆分（地基）**
+- 把 V1 单文件拆成五模块 + CLI，核心骨架 ~30 行，防御逻辑全部下沉。
+- 会话管理：每会话一个独立 JSON（`~/.minimal-agent-v2/sessions/`），**延迟持久化**——聊了第一条真实消息才落盘，没聊过的新会话不产生任何文件。
+- REPL 交互（`/list`、`/switch`、`/new`、`/delete`）、上下文压缩（`compress_if_needed`）。
+- 设计与报告文档体系：多任务并发路线图（结论 = 当前不实现，YAGNI）、三分支总结、Plan Mode 实现报告。
+
+**② skills-framework — 技能框架插口（对齐 Hermes 技能系统）**
+- V2 作为宿主提供通用技能插口，对应 Hermes 的 `skills.external_dirs` + `skill_view`。
+- 技能内容完全外置：独立的 MinimalSuperPowers 技能包（蒸馏自 obra/superpowers + kimi-code）通过 `--skills-dir` 挂载。
+- 宿主约定：技能索引注入 `<available_skills>`、`using-superpowers` 总开关全文只注入一次、`load_skill` 工具按需加载技能全文。
+- 去重设计来自 kimi 源码：`_bootstrap_injected` 标记 + 消息 `origin.kind == "injection"` 检测（REPL 会话恢复场景）。
+- 不挂任何技能包 = V2 原版行为（`--no-skills` 显式关闭）——插口零侵入。
+
+**③ plan-mode-v1 — Plan Mode 软约束版**
+- 纯提示词规划：`plan` 工具（写计划到 `~/.minimal-agent-v2/plans/`）+ system prompt 规划规则。
+- 提示词强制包含：阶段目标 + **验收条件** + 阶段验证 + **整体验证**。
+- 价值：先讲清楚"规划靠提示词也能实现"，为硬约束版提供对比基线。
+
+**④ plan-mode-v2 — Plan Mode 硬约束版（状态机 + 守卫）**
+- `PlanMode` 类（is_active/plan_path）+ `enter_plan_mode`/`exit_plan_mode` 工具。
+- **`plan_guard` 守卫**：规划期 `write` 只允许写计划文件，违规直接 `DENIED`；`ToolRunner` 在工具执行前加检查点，`cli.py` 注入守卫——对齐 Kimi 的 plan-mode-guard-deny。
+- REPL 新增 `/plan` 手动进入、`/run` 退出（人类介入入口，V3 审批的雏形）。
+- **实测黄金场景**：`/plan` 后模型直接写业务文件 → 守卫 DENIED → 模型读到错误后自动调 `exit_plan_mode` → 正常执行——软约束 vs 硬约束的最生动演示（"谁在强制"：状态在框架内存 vs 模型上下文）。
+
+**⑤ agent-ignore — AgentIgnore 路径权限（类 .gitignore 的权限控制）**
+- 语法：每行 `绝对路径::权限码`（R/W/X 子集，Linux 语义），空权限码 = 全禁。
+- 匹配 = 前缀命中 + 权限交集（做减法）：父目录禁止的权限，子目录加不回来；无命中 = RWX 全允许。
+- 路径归一化（`normpath(abspath())`）防 `../` 绕过；工具映射表覆盖 read/write/bash 等（bash 从 command 字符串正则提取绝对路径逐个校验）。
+- 检查点与 plan_guard 并列，拒绝时回填 `错误：AgentIgnore 权限校验失败` 给模型（不崩溃，模型可见可自纠）。
+- 6 组测试断言覆盖：解析容错/前缀交集/防绕过/工具拦截/ToolRunner 集成/未启用放行。
+
+---
+
+## 四、两代对比
+
+| 维度 | V1（mini-hermes-v1） | V2（mini-hermes-v2） |
+|------|---------------------|----------------------|
+| 形态 | 单文件（minimal_agent.py ~130 行） | 12 模块拆分 |
+| 核心循环 | 5 行，与工具/CLI 同函数 | 骨架 ~30 行，防御下沉到模块 |
+| 工具系统 | @tool 装饰器 + 7 工具 | 继承 + ToolRunner 守卫检查点 |
+| 会话 | 无 | session_manager + REPL + 延迟持久化 |
+| 技能 | 无 | 外置技能包插口（skills-framework） |
+| 规划 | 无 | 软约束（提示词）→ 硬约束（守卫） |
+| 权限 | 无 | AgentIgnore（R/W/X 交集匹配） |
+| 版本 | v0.1 | v2.0 |
+| 传承 | — | "V1 单文件 → V2 五模块"，@tool/工具集/CLI/DeepSeek 优先均继承 |
+
+---
+
+## 五、还没做的（路线图，对应 Hermes 进阶机制）
+
+V2 README 中挂起的扩展方向，恰好就是 Hermes 里那些"被剥离掉的防御机制"：
+
+- [ ] 流式输出（Hermes: `_interruptible_streaming_api_call`）
+- [ ] 并发工具执行（Hermes: `_execute_tool_calls_concurrent`）
+- [ ] 凭证自动轮换（Hermes: `_ensure_runtime_credentials`）
+- [ ] 上下文 LLM 摘要压缩（Hermes: `context_compressor`）
+- [ ] 记忆读写（Hermes: `memory_manager`）
+- [ ] 子代理分发（Hermes: `delegate_tool`）
+
+---
+
+## 六、学习路径建议
+
+1. **V1 起步**：读 `minimal_agent.py`，把 5 行核心循环背下来——这就是所有 Agent 的本质。
+2. **V2 结构化**：看五模块如何把防御逻辑拆出去，用"五模块各自回答的问题"理解职责划分。
+3. **进阶三件套**（按分支顺序）：skills-framework（技能外置）→ plan-mode（软 → 硬约束）→ agent-ignore（权限）。
+4. **对照源码验证**：每个模块都能在 Hermes 源码里找到对应实现，带着对照表去读，心里才踏实。
