@@ -3,7 +3,7 @@
 > 本项目不做代码，只做**总览**：把两代"从 Hermes 剥离的最小 Agent"项目串成一条学习路线，讲清楚每一代蒸馏了什么、实现了什么、成就了什么。
 
 > 🔖 **上下文专题（进行中）** —— 深攻方向：搜索 / RAG / agent 记忆——上下文工程（"上下文是未来的方向"）。
-> 总纲（顶级思考）：[基于生命周期识别的记忆管理](docs/thinking-20260826-lifecycle-based-memory-management.md) ｜ 首篇落地：[记忆分层规则引擎：决策思路复盘](docs/design-20260826-memory-rule-engine-decision.md) ｜ 专题登记见文末 [七、上下文专题](#七上下文专题进行中)
+> 总纲（顶级思考）：[基于生命周期识别的记忆管理](docs/thinking-20260826-lifecycle-based-memory-management.md) ｜ 落地：[记忆分层规则引擎：决策思路复盘](docs/design-20260826-memory-rule-engine-decision.md) ｜ 业界剖析：[Mem0 核心原理](docs/analysis-20260826-mem0-core-principles.md) ｜ 专题登记见文末 [七、上下文专题](#七上下文专题进行中)
 
 - **第一代** · [minimal-agent (mini-hermes-v1)](https://github.com/notfresh/mini-hermes-v1) — 单文件最小 Agent，验证"核心循环 5 行逻辑"
 - **第二代** · [minimal-agent-v2 (mini-hermes-v2)](https://github.com/notfresh/mini-hermes-v2) — 五模块拆分的教学级 Agent 框架，逐步补齐 Hermes 进阶机制
@@ -200,3 +200,4 @@ V2 README 中挂起的扩展方向，恰好就是 Hermes 里那些"被剥离掉�
 
 - **[基于生命周期识别的记忆管理](./docs/thinking-20260826-lifecycle-based-memory-management.md)** — 上下文专题·顶级思考（总纲）。核心主张：记忆/上下文管理是**调度问题**，不是容量问题。四层递进：周期是价值的锚（拐点判断）→ 信息管理即认知节能（保质期标签）→ 记忆管理双因子（先验属性 × 后验频率）→ 上下文工程仿生调度四原则（舞台角色 / 抢占式淘汰 / 结构化抽取 / TTL）。元结论：**频率 × 属性 × TTL 三维模型**——真正的记忆管理，不在于能塞多少，而在于能多快识别什么值得被反复想起。
 - **[记忆分层规则引擎：决策思路复盘](./docs/design-20260826-memory-rule-engine-decision.md)** — 总纲的第一块落地。agent 什么该长期记住、什么只配短期停留。五个决策：判断器用规则引擎不用 LLM 黑盒（可审计）、规则锚在知识生命周期（变更成本 ≈ 生命周期 ≈ 重建成本）、分层靠淘汰策略不靠预测（以使用定生死）、实现选最简档（12 条规则 = 45 行代码，YAGNI）、提取层与判断层分离（LLM 切句、规则定层）。附完整 12 条规则清单，与总纲三维模型逐条对应。
+- **[Mem0 核心原理：把 LLM 当记忆秘书的"写时增改删"](./docs/analysis-20260826-mem0-core-principles.md)** — 业界项目剖析第一篇（绑定 [mem0ai/mem0](https://github.com/mem0ai/mem0)，本地源码实测）。核心机制：对话不存原文，LLM 提取成事实条目，写时对已有记忆做 **ADD/UPDATE/DELETE**（写时思考）；读时多信号混合打分（语义门槛先筛 + BM25 + 实体加成）。四个可抄的防幻觉细节：UUID→整数映射、hash 去重、原始消息落 SQLite、OSS 版时间能力关闭。文末对照主线：Mem0=LLM 主判 vs 我们=规则主判——它的 UPDATE/DELETE 是设计文档中 P3（用户纠正覆盖）的自动化弱化版，但不可审计、无生命周期分层、写成本高。
