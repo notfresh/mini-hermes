@@ -7,7 +7,7 @@
 
 - 总纲（顶级思考）：[基于生命周期识别的记忆管理](docs/thinking-20260826-lifecycle-based-memory-management.md) 
 - 落地：[记忆分层规则引擎：决策思路复盘](docs/design-20260826-memory-rule-engine-decision.md)  
-- 业界剖析：[Mem0 核心原理](docs/analysis-20260826-mem0-core-principles.md) 
+- 业界剖析：[Mem0 核心原理](docs/analysis-20260826-mem0-core-principles.md) · [Letta Code](docs/analysis-20260826-letta-core-principles.md) · [Graphiti/Zep](docs/analysis-20260826-graphiti-core-principles.md)
 
 > 专题登记见文末 [七、上下文专题](#七上下文专题进行中)
 
@@ -209,3 +209,5 @@ V2 README 中挂起的扩展方向，恰好就是 Hermes 里那些"被剥离掉�
 - **[基于生命周期识别的记忆管理](./docs/thinking-20260826-lifecycle-based-memory-management.md)** — 上下文专题·总纲。按"问题→结论"四轮讨论整理：长短周期怎么判断价值 → 信息管理怎么省事 → 记忆管理双因子（属性决定天生该活多久，频率决定实际用得多不多）→ 上下文工程四档调度（常驻/检索/临时/不存）。核心结论：**频率 + 属性 + 有效期**三个维度决定一条信息放哪、留多久。
 - **[记忆分层规则引擎：决策思路复盘](./docs/design-20260826-memory-rule-engine-decision.md)** — 总纲的第一块落地。agent 什么该长期记住、什么只配短期停留。五个决策：判断器用规则引擎不用 LLM 黑盒（可审计）、规则锚在知识生命周期（变更成本 ≈ 生命周期 ≈ 重建成本）、分层靠淘汰策略不靠预测（以使用定生死）、实现选最简档（12 条规则 = 45 行代码，YAGNI）、提取层与判断层分离（LLM 切句、规则定层）。附完整 12 条规则清单，与总纲三维模型逐条对应。
 - **[Mem0 核心原理：把 LLM 当记忆秘书的"写时增改删"](./docs/analysis-20260826-mem0-core-principles.md)** — 业界项目剖析第一篇（绑定 [mem0ai/mem0](https://github.com/mem0ai/mem0)，本地源码实测）。核心机制：对话不存原文，LLM 提取成事实条目，写时对已有记忆做 **ADD/UPDATE/DELETE**（写时思考）；读时多信号混合打分（语义门槛先筛 + BM25 + 实体加成）。四个可抄的防幻觉细节：UUID→整数映射、hash 去重、原始消息落 SQLite、OSS 版时间能力关闭。文末对照主线：Mem0=LLM 主判 vs 我们=规则主判——它的 UPDATE/DELETE 是设计文档中 P3（用户纠正覆盖）的自动化弱化版，但不可审计、无生命周期分层、写成本高。
+- **[Letta Code：让 agent 自己改自己的记忆](./docs/analysis-20260826-letta-core-principles.md)** — 业界项目剖析第二篇。⚠️ 仓库事实：`letta-ai/letta` 主分支已只是落地页，V1 Python 版退役归档，**当前实现在 [letta-ai/letta-code](https://github.com/letta-ai/letta-code)**（TypeScript/Bun）。核心机制：记忆 = **Memory Blocks**（persona/human 默认块，直接拼进系统提示词，每轮常驻）；agent 用 5 个记忆工具（memory / memory_apply_patch / memory_insert / memory_replace / memory_rethink）**在对话里自己编辑记忆**；全部记忆是文件且 git 跟踪（**MemFS**，可同步私人 GitHub 仓库，每次修改即一次 commit）；`/sleeptime` 配置 periodic dreaming（定期反思，reflection 子代理）。对照主线：Letta 的自我编辑 = 四维模型中"Agent 主动探测"维度的业界极致，但"为什么改"仍是 LLM 隐式判断，无规则层宪法、无 TTL 先验。
+- **[Graphiti：给知识图谱装上时间轴（Zep 的开源核心）](./docs/analysis-20260826-graphiti-core-principles.md)** — 业界项目剖析第三篇。⚠️ 仓库事实：Zep 产品 = 托管平台（zep-cloud SDK），开源核心 = [getzep/graphiti](https://github.com/getzep/graphiti)（30.3k stars），`getzep/zep` 只是示例/集成仓。核心机制：对话增量提取实体/关系（不重建图），**EntityEdge 带双时间轴**（valid_at/invalid_at = 事实成立/失效，expired_at = 系统失效，reference_time = 来源时间）→ 可"时间旅行"查询当时的事实；Episodic（原文）/ Entity（语义）/ Community（label propagation 聚类 + LLM 摘要）三层；边失效机制自动淘汰矛盾旧事实；检索 = edge/node/episode/community 四 scope × fulltext/向量/bfs 三手段。对照主线：时间轴 = 设计里 TTL+provenance 的图增强版，验证了"记忆必须带时间+来源"的判断，但依赖图数据库部署重、仍 LLM 主判。
