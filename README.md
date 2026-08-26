@@ -1,14 +1,22 @@
 # Mini-Hermes — 从 Hermes 蒸馏最小 Agent 的两代实践
 
-> 本项目不做代码，只做**总览**：把两代"从 Hermes 剥离的最小 Agent"项目串成一条学习路线，讲清楚每一代蒸馏了什么、实现了什么、成就了什么。
+> 本项目不做代码，只做**总览和**：把两代"从 Hermes 剥离的最小 Agent"项目串成一条学习路线，讲清楚每一代蒸馏了什么、实现了什么、成就了什么。
+> 本项目也会记录作者的新功能的设计思路。
 
-> 🔖 **上下文专题（进行中）** —— 深攻方向：搜索 / RAG / agent 记忆——上下文工程（"上下文是未来的方向"）。
-> 总纲（顶级思考）：[基于生命周期识别的记忆管理](docs/thinking-20260826-lifecycle-based-memory-management.md) ｜ 落地：[记忆分层规则引擎：决策思路复盘](docs/design-20260826-memory-rule-engine-decision.md) ｜ 业界剖析：[Mem0 核心原理](docs/analysis-20260826-mem0-core-principles.md) ｜ 专题登记见文末 [七、上下文专题](#七上下文专题进行中)
+🔖 **补充说明：上下文专题（进行中）** —— 深攻方向：搜索 / RAG / agent 记忆——上下文工程是Agent更加高效的方向。
+
+- 总纲（顶级思考）：[基于生命周期识别的记忆管理](docs/thinking-20260826-lifecycle-based-memory-management.md) 
+- 落地：[记忆分层规则引擎：决策思路复盘](docs/design-20260826-memory-rule-engine-decision.md)  
+- 业界剖析：[Mem0 核心原理](docs/analysis-20260826-mem0-core-principles.md) 
+
+> 专题登记见文末 [七、上下文专题](#七上下文专题进行中)
+
+---
 
 - **第一代** · [minimal-agent (mini-hermes-v1)](https://github.com/notfresh/mini-hermes-v1) — 单文件最小 Agent，验证"核心循环 5 行逻辑"
 - **第二代** · [minimal-agent-v2 (mini-hermes-v2)](https://github.com/notfresh/mini-hermes-v2) — 五模块拆分的教学级 Agent 框架，逐步补齐 Hermes 进阶机制
 
----
+
 
 ## 一、这两个项目解决什么问题（价值）
 
