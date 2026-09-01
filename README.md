@@ -3,7 +3,7 @@
 > 本项目不做代码，只做**总览和**：把两代"从 Hermes 剥离的最小 Agent"项目串成一条学习路线，讲清楚每一代蒸馏了什么、实现了什么、成就了什么。
 > 本项目也会记录作者的新功能的设计思路。
 
-🔖 **agent 原理系列（进行中）** —— 讲清 Agent 的基本概念与机制。第一篇：[Skill vs Plugin：内容与机制的分界线](docs/principle-20260901-skill-vs-plugin.md)。上下文专题已并入本系列，见下。
+🔖 **agent 原理系列（进行中）** —— 讲清 Agent 的基本概念与机制。第一篇：[Skill vs Plugin：内容与机制的分界线](docs/principle-20260901-skill-vs-plugin.md) · 第二篇：[Hermes 如何记住"当前工作目录"（一个状态，三层存储）](docs/principle-20260901-hermes-cwd-mechanism.md)。上下文专题已并入本系列，见下。
 
 🔖 **上下文专题（进行中 · agent 原理系列子专题）** —— 深攻方向：搜索 / RAG / agent 记忆——上下文工程是Agent更加高效的方向。
 
@@ -213,6 +213,7 @@ V2 README 中挂起的扩展方向，恰好就是 Hermes 里那些"被剥离掉�
 > 讲清 Agent 的基本概念与机制。上下文专题已并入本系列。
 
 - **[Skill vs Plugin：内容与机制的分界线](./docs/principle-20260901-skill-vs-plugin.md)** — agent 原理系列·第一篇。skill 与 plugin 的界限不在文件形态，在**加载机制**：skill 是内容（模型按需读取，渐进式披露），plugin 是代码（进程启动时 import 并执行 `register()`）。两个反例打掉"文档 vs 代码"的二分：plugin 可带 skill（superpowers 以插件形式分发一百多个 SKILL.md）、skill 可带 py 脚本（本机 35 个 skill 带 scripts/）。一句话判据：有没有被 Hermes 进程 import 并执行。
+- **[Hermes 如何记住"当前工作目录"：一个状态，三层存储](./docs/principle-20260901-hermes-cwd-mechanism.md)** — agent 原理系列·第二篇（机制讲解，不做源码逐行分析）。cwd 是"会漂移的工具级状态"，Hermes 用三层存储投影同一值：**内存字典**（会话活体，每条 terminal 命令完成后更新，三个例外：带 workdir 参数/命令超时没报告/非 terminal 工具）；**SQLite 列**（跨进程档案，会话创建时写起点目录，恢复时回到起点而非上次 cd 处）；**环境变量 TERMINAL_CWD**（进程内广播，入口点更新，子进程自动继承——这是不用 Python 全局变量的原因）。对比 Kimi Code：锚定型（cwd 不漂移、不用记）vs 通用型（漂移、要跟踪）。启示：易变状态分三层——活体/档案/广播，判断问三问：谁会读、活多久、变多快。（详细版带文件:行号见 hermes-agent-plus/001study/hermes-cwd-tracking-report.md）
 
 ### 上下文专题（agent 原理系列·子专题）
 
