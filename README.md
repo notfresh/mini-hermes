@@ -3,7 +3,9 @@
 > 本项目不做代码，只做**总览和**：把两代"从 Hermes 剥离的最小 Agent"项目串成一条学习路线，讲清楚每一代蒸馏了什么、实现了什么、成就了什么。
 > 本项目也会记录作者的新功能的设计思路。
 
-🔖 **补充说明：上下文专题（进行中）** —— 深攻方向：搜索 / RAG / agent 记忆——上下文工程是Agent更加高效的方向。
+🔖 **agent 原理系列（进行中）** —— 讲清 Agent 的基本概念与机制。第一篇：[Skill vs Plugin：内容与机制的分界线](docs/principle-20260901-skill-vs-plugin.md)。上下文专题已并入本系列，见下。
+
+🔖 **上下文专题（进行中 · agent 原理系列子专题）** —— 深攻方向：搜索 / RAG / agent 记忆——上下文工程是Agent更加高效的方向。
 
 - 总纲（顶级思考）：[基于生命周期识别的记忆管理](docs/thinking-20260826-lifecycle-based-memory-management.md) 
 - 落地：[记忆分层规则引擎：决策思路复盘](docs/design-20260826-memory-rule-engine-decision.md)  
@@ -11,7 +13,7 @@
 - Hermes 自身：[记忆系统综述（内置双文件 vs 外部插件）](docs/review-20260826-hermes-memory-system.md)
 - 学术综述：[Agent 记忆 2026 综述导读（三维度框架 × 六挑战）](docs/analysis-20260826-agent-memory-survey-2026.md)
 
-> 专题登记见文末 [七、上下文专题](#七上下文专题进行中)
+> 专题登记见文末 [七、专题登记](#七专题登记)
 
 ---
 
@@ -204,7 +206,15 @@ V2 README 中挂起的扩展方向，恰好就是 Hermes 里那些"被剥离掉�
 
 ---
 
-## 七、上下文专题（进行中）
+## 七、专题登记
+
+### agent 原理系列
+
+> 讲清 Agent 的基本概念与机制。上下文专题已并入本系列。
+
+- **[Skill vs Plugin：内容与机制的分界线](./docs/principle-20260901-skill-vs-plugin.md)** — agent 原理系列·第一篇。skill 与 plugin 的界限不在文件形态，在**加载机制**：skill 是内容（模型按需读取，渐进式披露），plugin 是代码（进程启动时 import 并执行 `register()`）。两个反例打掉"文档 vs 代码"的二分：plugin 可带 skill（superpowers 以插件形式分发一百多个 SKILL.md）、skill 可带 py 脚本（本机 35 个 skill 带 scripts/）。一句话判据：有没有被 Hermes 进程 import 并执行。
+
+### 上下文专题（agent 原理系列·子专题）
 
 > 深攻方向：搜索 / RAG / agent 记忆——"上下文是未来的方向"。上下文工程 = 让 agent 借鉴过往的智慧：检索、记忆、上下文管理。**总纲（顶级思考）先行，落地设计随后**。
 
