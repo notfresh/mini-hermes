@@ -227,3 +227,10 @@ V2 README 中挂起的扩展方向，恰好就是 Hermes 里那些"被剥离掉�
 - **[Hermes 记忆系统综述：内置双文件 vs 可插拔外部记忆](./docs/review-20260826-hermes-memory-system.md)** — Hermes 自身机制综述。内置 MemoryStore（MEMORY.md + USER.md，2200+1375 字符上限，冻结快照 + 实时双状态、防投毒扫描、合并失败降级）；记忆全生命周期（回合开始 prefetch → `<memory-context>` 注入 → memory 工具读写 → 每 10 轮后台反思 fork）；可插拔架构 = MemoryProvider ABC（19 钩子）+ MemoryManager（内置永远在，外部最多一个，失败隔离）；**8 个外部记忆插件**（honcho / mem0 / holographic / hindsight / supermemory / byterover / openviking / retaindb）。对照结论：内置双文件对个人助手级够用（有界=强制蒸馏、零依赖、防投毒），升级判据 = 量大上向量检索、要历史上时间轴、要主动进化上自我编辑。
 - **[Agent 记忆 2026 综述导读：三维度框架与六个开放挑战](./docs/analysis-20260826-agent-memory-survey-2026.md)** — 学术综述导读。原文《Rethinking Memory Mechanisms of Foundation Agents in the Second Half: A Survey》（[arXiv:2602.06052](https://arxiv.org/abs/2602.06052)，59 作者，83 页，收录 218 篇 2023Q1–2025Q4）。核心：**三维度框架**（memory substrate 基板 internal/external × cognitive mechanism 五种认知机制 sensory/working/episodic/semantic/procedural × memory subject 主体 user/agent-centric）+ 六开放挑战（自进化 / 多智能体 / 效率 / **终身个性化与可信记忆** / 多模态具身 / 真实评测）。对照结论：论文验证了"记忆是调度问题"和"判定必须可审计"两个判断；你的规则引擎 = learning policies 的可解释轻量版；MemGPT=工作记忆、Mem0=语义记忆、Graphiti=情景记忆+时间，Hermes Agent 未收录（太新）——正是空白机会。原文 PDF 存 `~/.hermes/knowledge/papers/`。
 - **[Hermes 如何记住"当前工作目录"：一个状态，三层存储](./docs/principle-20260901-hermes-cwd-mechanism.md)** — agent 原理系列·第二篇（机制讲解，不做源码逐行分析）。cwd 是"会漂移的工具级状态"，Hermes 用三层存储投影同一值：**内存字典**（会话活体，每条 terminal 命令完成后更新，三个例外：带 workdir 参数/命令超时没报告/非 terminal 工具）；**SQLite 列**（跨进程档案，会话创建时写起点目录，恢复时回到起点而非上次 cd 处）；**环境变量 TERMINAL_CWD**（进程内广播，入口点更新，子进程自动继承——这是不用 Python 全局变量的原因）。对比 Kimi Code：锚定型（cwd 不漂移、不用记）vs 通用型（漂移、要跟踪）。启示：易变状态分三层——活体/档案/广播，判断问三问：谁会读、活多久、变多快。
+
+### hermes 科普系列（wiki/）
+
+> 把 Hermes 的机制讲成大白话，文章在 `wiki/` 目录（与 docs/ 的深文分开）。
+
+- [Hermes 的多张脸：一个大脑，四种皮肤](./wiki/popular-20260902-hermes-multi-surface.md) — 科普系列·第一篇。同一个 `/ss` 在 CLI 打印、TUI 弹窗、飞书回话之谜：大脑（agent core，无界面）与四张脸（CLI/TUI/Desktop/Gateway）分离；config.yaml 全局共享、命令表统一注册但各端自由实现；会话按 source 盖章隔离（cron/feishu/cli/tui）——顺带解开"CLI 里 /ss 看不到飞书会话"的困惑。
+- （规划）`/ss` 别名移植全过程：从 kimi issue #3158 到 Hermes 三张脸（第一篇文末已预告）
