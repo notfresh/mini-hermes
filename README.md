@@ -5,6 +5,8 @@
 
 🔖 **agent 原理系列（进行中）** —— 讲清 Agent 的基本概念与机制。第一篇：[Skill vs Plugin：内容与机制的分界线](docs/principle-20260901-skill-vs-plugin.md) · 第二篇：[Hermes 如何记住"当前工作目录"（一个状态，三层存储）](docs/principle-20260901-hermes-cwd-mechanism.md)。上下文专题已并入本系列，见下。
 
+🔖 **元认知系列（新开）** —— 关于"怎么看代码"，不是"代码做了什么"。第一篇：[什么是架构](docs/什么是架构.md)。调研前必读——先问三件事（边界/责任分配/不变），再谈架构图怎么画。
+
 🔖 **上下文专题（进行中 · agent 原理系列子专题）** —— 深攻方向：搜索 / RAG / agent 记忆——上下文工程是Agent更加高效的方向。
 
 - 总纲（顶级思考）：[基于生命周期识别的记忆管理](docs/thinking-20260826-lifecycle-based-memory-management.md) 
