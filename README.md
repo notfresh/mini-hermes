@@ -3,7 +3,7 @@
 > 本项目不做代码，只做**总览和**：把两代"从 Hermes 剥离的最小 Agent"项目串成一条学习路线，讲清楚每一代蒸馏了什么、实现了什么、成就了什么。
 > 本项目也会记录作者的新功能的设计思路。
 
-🔖 **agent 原理系列（进行中）** —— 讲清 Agent 的基本概念与机制。第一篇：[Skill vs Plugin：内容与机制的分界线](docs/principle-20260901-skill-vs-plugin.md) · 第二篇：[Hermes 如何记住"当前工作目录"（一个状态，三层存储）](docs/principle-20260901-hermes-cwd-mechanism.md)。上下文专题已并入本系列，见下。
+🔖 **agent 原理系列（进行中）** —— 讲清 Agent 的基本概念与机制。第一篇：[Skill vs Plugin：内容与机制的分界线](docs/principle-20260901-skill-vs-plugin.md) · 第二篇：[Hermes 如何记住"当前工作目录"（一个状态，三层存储）](docs/principle-20260901-hermes-cwd-mechanism.md) · 第三篇：[Agent 如何记住用户教的纠正：Self-Learning 闭环](docs/principle-20260907-self-learning-loop.md)。上下文专题已并入本系列，见下。
 
 🔖 **元认知系列（新开）** —— 关于"怎么看代码"，不是"代码做了什么"。第一篇：[什么是架构](docs/什么是架构.md)。调研前必读——先问三件事（边界/责任分配/不变），再谈架构图怎么画。
 
@@ -216,6 +216,7 @@ V2 README 中挂起的扩展方向，恰好就是 Hermes 里那些"被剥离掉�
 
 - **[Skill vs Plugin：内容与机制的分界线](./docs/principle-20260901-skill-vs-plugin.md)** — agent 原理系列·第一篇。skill 与 plugin 的界限不在文件形态，在**加载机制**：skill 是内容（模型按需读取，渐进式披露），plugin 是代码（进程启动时 import 并执行 `register()`）。两个反例打掉"文档 vs 代码"的二分：plugin 可带 skill（superpowers 以插件形式分发一百多个 SKILL.md）、skill 可带 py 脚本（本机 35 个 skill 带 scripts/）。一句话判据：有没有被 Hermes 进程 import 并执行。
 - **[Hermes 如何记住"当前工作目录"：一个状态，三层存储](./docs/principle-20260901-hermes-cwd-mechanism.md)** — agent 原理系列·第二篇（机制讲解，不做源码逐行分析）。cwd 是"会漂移的工具级状态"，Hermes 用三层存储投影同一值：**内存字典**（会话活体，每条 terminal 命令完成后更新，三个例外：带 workdir 参数/命令超时没报告/非 terminal 工具）；**SQLite 列**（跨进程档案，会话创建时写起点目录，恢复时回到起点而非上次 cd 处）；**环境变量 TERMINAL_CWD**（进程内广播，入口点更新，子进程自动继承——这是不用 Python 全局变量的原因）。对比 Kimi Code：锚定型（cwd 不漂移、不用记）vs 通用型（漂移、要跟踪）。启示：易变状态分三层——活体/档案/广播，判断问三问：谁会读、活多久、变多快。（详细版带文件:行号见 hermes-agent-plus/001study/hermes-cwd-tracking-report.md）
+- **[Agent 如何记住用户教的纠正：Self-Learning 闭环](./docs/principle-20260907-self-learning-loop.md)** — agent 原理系列·第三篇（机制讲解，案例 = `minimal-agent-v2-self-learning` 分支）。核心问题：用户的纠正默认是 session 级临时态，关掉就清零 → 下次同类任务又犯。闭环四要素 = 触发器（每 N 轮，`session_manager.py:317`）+ 取样器（只取 user/assistant 文本，`self_learning.py:103`）+ 蒸馏器（反思提示词 + `NOTHING` 显式退路，`self_learning.py:26-41`）+ 落盘器（标准 `name/SKILL.md` 复用 V2 已有的 SkillRegistry 扫描契约）。零记忆模块——靠文件系统做持久化。教学版 vs Hermes 生产版差距：触发密度（3 vs 10）、后台异步 vs 前台同步、双通道（MEMORY + Skill）vs 单通道（仅 Skill）、生命周期管理有无。启示：让用户教的纠正"留下来"是 agent 的最低成本增量——4 文件改动（1 新增 + 3 小改）就能跑通，比向量数据库便宜得多。
 
 ### 上下文专题（agent 原理系列·子专题）
 
@@ -229,6 +230,7 @@ V2 README 中挂起的扩展方向，恰好就是 Hermes 里那些"被剥离掉�
 - **[Hermes 记忆系统综述：内置双文件 vs 可插拔外部记忆](./docs/review-20260826-hermes-memory-system.md)** — Hermes 自身机制综述。内置 MemoryStore（MEMORY.md + USER.md，2200+1375 字符上限，冻结快照 + 实时双状态、防投毒扫描、合并失败降级）；记忆全生命周期（回合开始 prefetch → `<memory-context>` 注入 → memory 工具读写 → 每 10 轮后台反思 fork）；可插拔架构 = MemoryProvider ABC（19 钩子）+ MemoryManager（内置永远在，外部最多一个，失败隔离）；**8 个外部记忆插件**（honcho / mem0 / holographic / hindsight / supermemory / byterover / openviking / retaindb）。对照结论：内置双文件对个人助手级够用（有界=强制蒸馏、零依赖、防投毒），升级判据 = 量大上向量检索、要历史上时间轴、要主动进化上自我编辑。
 - **[Agent 记忆 2026 综述导读：三维度框架与六个开放挑战](./docs/analysis-20260826-agent-memory-survey-2026.md)** — 学术综述导读。原文《Rethinking Memory Mechanisms of Foundation Agents in the Second Half: A Survey》（[arXiv:2602.06052](https://arxiv.org/abs/2602.06052)，59 作者，83 页，收录 218 篇 2023Q1–2025Q4）。核心：**三维度框架**（memory substrate 基板 internal/external × cognitive mechanism 五种认知机制 sensory/working/episodic/semantic/procedural × memory subject 主体 user/agent-centric）+ 六开放挑战（自进化 / 多智能体 / 效率 / **终身个性化与可信记忆** / 多模态具身 / 真实评测）。对照结论：论文验证了"记忆是调度问题"和"判定必须可审计"两个判断；你的规则引擎 = learning policies 的可解释轻量版；MemGPT=工作记忆、Mem0=语义记忆、Graphiti=情景记忆+时间，Hermes Agent 未收录（太新）——正是空白机会。原文 PDF 存 `~/.hermes/knowledge/papers/`。
 - **[Hermes 如何记住"当前工作目录"：一个状态，三层存储](./docs/principle-20260901-hermes-cwd-mechanism.md)** — agent 原理系列·第二篇（机制讲解，不做源码逐行分析）。cwd 是"会漂移的工具级状态"，Hermes 用三层存储投影同一值：**内存字典**（会话活体，每条 terminal 命令完成后更新，三个例外：带 workdir 参数/命令超时没报告/非 terminal 工具）；**SQLite 列**（跨进程档案，会话创建时写起点目录，恢复时回到起点而非上次 cd 处）；**环境变量 TERMINAL_CWD**（进程内广播，入口点更新，子进程自动继承——这是不用 Python 全局变量的原因）。对比 Kimi Code：锚定型（cwd 不漂移、不用记）vs 通用型（漂移、要跟踪）。启示：易变状态分三层——活体/档案/广播，判断问三问：谁会读、活多久、变多快。
+- **[Agent 如何记住用户教的纠正：Self-Learning 闭环](./docs/principle-20260907-self-learning-loop.md)** — 上下文专题·agent 记忆的最小例子（机制讲解，案例 = `minimal-agent-v2-self-learning` 分支）。用户的纠正默认是 session 级临时态，关掉就清零；自学习 = 把临时态转成持久态。闭环四要素：触发器（每 N 轮，`session_manager.py:317`）+ 取样器（只取 user/assistant，`self_learning.py:103`）+ 蒸馏器（反思提示词 + NOTHING 显式退路，`self_learning.py:26-41`）+ 落盘器（标准 `name/SKILL.md` 复用 V2 已有 SkillRegistry 扫描契约）。零记忆模块——靠文件系统做持久化。
 
 ### hermes 科普系列（wiki/）
 
