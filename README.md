@@ -1,21 +1,7 @@
 # Mini-Hermes — 从 Hermes 蒸馏最小 Agent 的两代实践
 
-> 本项目不做代码，只做**总览和**：把两代"从 Hermes 剥离的最小 Agent"项目串成一条学习路线，讲清楚每一代蒸馏了什么、实现了什么、成就了什么。
-> 本项目也会记录作者的新功能的设计思路。
-
-🔖 **agent 原理系列（进行中）** —— 讲清 Agent 的基本概念与机制。第一篇：[Skill vs Plugin：内容与机制的分界线](docs/principle-20260901-skill-vs-plugin.md) · 第二篇：[Hermes 如何记住"当前工作目录"（一个状态，三层存储）](docs/principle-20260901-hermes-cwd-mechanism.md) · 第三篇：[Agent 如何记住用户教的纠正：Self-Learning 闭环](docs/principle-20260907-self-learning-loop.md)。上下文专题已并入本系列，见下。
-
-🔖 **元认知系列（新开）** —— 关于"怎么看代码"，不是"代码做了什么"。第一篇：[什么是架构](docs/什么是架构.md)。调研前必读——先问三件事（边界/责任分配/不变），再谈架构图怎么画。
-
-🔖 **上下文专题（进行中 · agent 原理系列子专题）** —— 深攻方向：搜索 / RAG / agent 记忆——上下文工程是Agent更加高效的方向。
-
-- 总纲（顶级思考）：[基于生命周期识别的记忆管理](docs/thinking-20260826-lifecycle-based-memory-management.md) 
-- 落地：[记忆分层规则引擎：决策思路复盘](docs/design-20260826-memory-rule-engine-decision.md)  
-- 业界剖析：[Mem0 核心原理](docs/analysis-20260826-mem0-core-principles.md) · [Letta Code](docs/analysis-20260826-letta-core-principles.md) · [Graphiti/Zep](docs/analysis-20260826-graphiti-core-principles.md)
-- Hermes 自身：[记忆系统综述（内置双文件 vs 外部插件）](docs/review-20260826-hermes-memory-system.md) · [如何记住当前工作目录（一个状态，三层存储）](docs/principle-20260901-hermes-cwd-mechanism.md)
-- 学术综述：[Agent 记忆 2026 综述导读（三维度框架 × 六挑战）](docs/analysis-20260826-agent-memory-survey-2026.md)
-
-> 专题登记见文末 [七、专题登记](#七专题登记)
+> 本项目不做文章，只做**项目总览**：把两代"从 Hermes 剥离的最小 Agent"项目串成一条学习路线，讲清楚每一代蒸馏了什么、实现了什么、成就了什么。
+> 调研笔记 / 原理讲解 / 业界剖析等文章全部沉淀在姊妹仓 **[hermes-agent-stories](https://github.com/notfresh/hermes-agent-stories)**。
 
 ---
 
@@ -210,31 +196,10 @@ V2 README 中挂起的扩展方向，恰好就是 Hermes 里那些"被剥离掉�
 
 ## 七、专题登记
 
-### agent 原理系列
-
-> 讲清 Agent 的基本概念与机制。上下文专题已并入本系列。
-
-- **[Skill vs Plugin：内容与机制的分界线](./docs/principle-20260901-skill-vs-plugin.md)** — agent 原理系列·第一篇。skill 与 plugin 的界限不在文件形态，在**加载机制**：skill 是内容（模型按需读取，渐进式披露），plugin 是代码（进程启动时 import 并执行 `register()`）。两个反例打掉"文档 vs 代码"的二分：plugin 可带 skill（superpowers 以插件形式分发一百多个 SKILL.md）、skill 可带 py 脚本（本机 35 个 skill 带 scripts/）。一句话判据：有没有被 Hermes 进程 import 并执行。
-- **[Hermes 如何记住"当前工作目录"：一个状态，三层存储](./docs/principle-20260901-hermes-cwd-mechanism.md)** — agent 原理系列·第二篇（机制讲解，不做源码逐行分析）。cwd 是"会漂移的工具级状态"，Hermes 用三层存储投影同一值：**内存字典**（会话活体，每条 terminal 命令完成后更新，三个例外：带 workdir 参数/命令超时没报告/非 terminal 工具）；**SQLite 列**（跨进程档案，会话创建时写起点目录，恢复时回到起点而非上次 cd 处）；**环境变量 TERMINAL_CWD**（进程内广播，入口点更新，子进程自动继承——这是不用 Python 全局变量的原因）。对比 Kimi Code：锚定型（cwd 不漂移、不用记）vs 通用型（漂移、要跟踪）。启示：易变状态分三层——活体/档案/广播，判断问三问：谁会读、活多久、变多快。（详细版带文件:行号见 hermes-agent-plus/001study/hermes-cwd-tracking-report.md）
-- **[Agent 如何记住用户教的纠正：Self-Learning 闭环](./docs/principle-20260907-self-learning-loop.md)** — agent 原理系列·第三篇（机制讲解，案例 = `minimal-agent-v2-self-learning` 分支）。核心问题：用户的纠正默认是 session 级临时态，关掉就清零 → 下次同类任务又犯。闭环四要素 = 触发器（每 N 轮，`session_manager.py:317`）+ 取样器（只取 user/assistant 文本，`self_learning.py:103`）+ 蒸馏器（反思提示词 + `NOTHING` 显式退路，`self_learning.py:26-41`）+ 落盘器（标准 `name/SKILL.md` 复用 V2 已有的 SkillRegistry 扫描契约）。零记忆模块——靠文件系统做持久化。教学版 vs Hermes 生产版差距：触发密度（3 vs 10）、后台异步 vs 前台同步、双通道（MEMORY + Skill）vs 单通道（仅 Skill）、生命周期管理有无。启示：让用户教的纠正"留下来"是 agent 的最低成本增量——4 文件改动（1 新增 + 3 小改）就能跑通，比向量数据库便宜得多。
-
-### 上下文专题（agent 原理系列·子专题）
-
-> 深攻方向：搜索 / RAG / agent 记忆——"上下文是未来的方向"。上下文工程 = 让 agent 借鉴过往的智慧：检索、记忆、上下文管理。**总纲（顶级思考）先行，落地设计随后**。
-
-- **[基于生命周期识别的记忆管理](./docs/thinking-20260826-lifecycle-based-memory-management.md)** — 上下文专题·总纲。按"问题→结论"四轮讨论整理：长短周期怎么判断价值 → 信息管理怎么省事 → 记忆管理双因子（属性决定天生该活多久，频率决定实际用得多不多）→ 上下文工程四档调度（常驻/检索/临时/不存）。核心结论：**频率 + 属性 + 有效期**三个维度决定一条信息放哪、留多久。
-- **[记忆分层规则引擎：决策思路复盘](./docs/design-20260826-memory-rule-engine-decision.md)** — 总纲的第一块落地。agent 什么该长期记住、什么只配短期停留。五个决策：判断器用规则引擎不用 LLM 黑盒（可审计）、规则锚在知识生命周期（变更成本 ≈ 生命周期 ≈ 重建成本）、分层靠淘汰策略不靠预测（以使用定生死）、实现选最简档（12 条规则 = 45 行代码，YAGNI）、提取层与判断层分离（LLM 切句、规则定层）。附完整 12 条规则清单，与总纲三维模型逐条对应。
-- **[Mem0 核心原理：把 LLM 当记忆秘书的"写时增改删"](./docs/analysis-20260826-mem0-core-principles.md)** — 业界项目剖析第一篇（绑定 [mem0ai/mem0](https://github.com/mem0ai/mem0)，本地源码实测）。核心机制：对话不存原文，LLM 提取成事实条目，写时对已有记忆做 **ADD/UPDATE/DELETE**（写时思考）；读时多信号混合打分（语义门槛先筛 + BM25 + 实体加成）。四个可抄的防幻觉细节：UUID→整数映射、hash 去重、原始消息落 SQLite、OSS 版时间能力关闭。文末对照主线：Mem0=LLM 主判 vs 我们=规则主判——它的 UPDATE/DELETE 是设计文档中 P3（用户纠正覆盖）的自动化弱化版，但不可审计、无生命周期分层、写成本高。
-- **[Letta Code：让 agent 自己改自己的记忆](./docs/analysis-20260826-letta-core-principles.md)** — 业界项目剖析第二篇。⚠️ 仓库事实：`letta-ai/letta` 主分支已只是落地页，V1 Python 版退役归档，**当前实现在 [letta-ai/letta-code](https://github.com/letta-ai/letta-code)**（TypeScript/Bun）。核心机制：记忆 = **Memory Blocks**（persona/human 默认块，直接拼进系统提示词，每轮常驻）；agent 用 5 个记忆工具（memory / memory_apply_patch / memory_insert / memory_replace / memory_rethink）**在对话里自己编辑记忆**；全部记忆是文件且 git 跟踪（**MemFS**，可同步私人 GitHub 仓库，每次修改即一次 commit）；`/sleeptime` 配置 periodic dreaming（定期反思，reflection 子代理）。对照主线：Letta 的自我编辑 = 四维模型中"Agent 主动探测"维度的业界极致，但"为什么改"仍是 LLM 隐式判断，无规则层宪法、无 TTL 先验。
-- **[Graphiti：给知识图谱装上时间轴（Zep 的开源核心）](./docs/analysis-20260826-graphiti-core-principles.md)** — 业界项目剖析第三篇。⚠️ 仓库事实：Zep 产品 = 托管平台（zep-cloud SDK），开源核心 = [getzep/graphiti](https://github.com/getzep/graphiti)（30.3k stars），`getzep/zep` 只是示例/集成仓。核心机制：对话增量提取实体/关系（不重建图），**EntityEdge 带双时间轴**（valid_at/invalid_at = 事实成立/失效，expired_at = 系统失效，reference_time = 来源时间）→ 可"时间旅行"查询当时的事实；Episodic（原文）/ Entity（语义）/ Community（label propagation 聚类 + LLM 摘要）三层；边失效机制自动淘汰矛盾旧事实；检索 = edge/node/episode/community 四 scope × fulltext/向量/bfs 三手段。对照主线：时间轴 = 设计里 TTL+provenance 的图增强版，验证了"记忆必须带时间+来源"的判断，但依赖图数据库部署重、仍 LLM 主判。
-- **[Hermes 记忆系统综述：内置双文件 vs 可插拔外部记忆](./docs/review-20260826-hermes-memory-system.md)** — Hermes 自身机制综述。内置 MemoryStore（MEMORY.md + USER.md，2200+1375 字符上限，冻结快照 + 实时双状态、防投毒扫描、合并失败降级）；记忆全生命周期（回合开始 prefetch → `<memory-context>` 注入 → memory 工具读写 → 每 10 轮后台反思 fork）；可插拔架构 = MemoryProvider ABC（19 钩子）+ MemoryManager（内置永远在，外部最多一个，失败隔离）；**8 个外部记忆插件**（honcho / mem0 / holographic / hindsight / supermemory / byterover / openviking / retaindb）。对照结论：内置双文件对个人助手级够用（有界=强制蒸馏、零依赖、防投毒），升级判据 = 量大上向量检索、要历史上时间轴、要主动进化上自我编辑。
-- **[Agent 记忆 2026 综述导读：三维度框架与六个开放挑战](./docs/analysis-20260826-agent-memory-survey-2026.md)** — 学术综述导读。原文《Rethinking Memory Mechanisms of Foundation Agents in the Second Half: A Survey》（[arXiv:2602.06052](https://arxiv.org/abs/2602.06052)，59 作者，83 页，收录 218 篇 2023Q1–2025Q4）。核心：**三维度框架**（memory substrate 基板 internal/external × cognitive mechanism 五种认知机制 sensory/working/episodic/semantic/procedural × memory subject 主体 user/agent-centric）+ 六开放挑战（自进化 / 多智能体 / 效率 / **终身个性化与可信记忆** / 多模态具身 / 真实评测）。对照结论：论文验证了"记忆是调度问题"和"判定必须可审计"两个判断；你的规则引擎 = learning policies 的可解释轻量版；MemGPT=工作记忆、Mem0=语义记忆、Graphiti=情景记忆+时间，Hermes Agent 未收录（太新）——正是空白机会。原文 PDF 存 `~/.hermes/knowledge/papers/`。
-- **[Hermes 如何记住"当前工作目录"：一个状态，三层存储](./docs/principle-20260901-hermes-cwd-mechanism.md)** — agent 原理系列·第二篇（机制讲解，不做源码逐行分析）。cwd 是"会漂移的工具级状态"，Hermes 用三层存储投影同一值：**内存字典**（会话活体，每条 terminal 命令完成后更新，三个例外：带 workdir 参数/命令超时没报告/非 terminal 工具）；**SQLite 列**（跨进程档案，会话创建时写起点目录，恢复时回到起点而非上次 cd 处）；**环境变量 TERMINAL_CWD**（进程内广播，入口点更新，子进程自动继承——这是不用 Python 全局变量的原因）。对比 Kimi Code：锚定型（cwd 不漂移、不用记）vs 通用型（漂移、要跟踪）。启示：易变状态分三层——活体/档案/广播，判断问三问：谁会读、活多久、变多快。
-- **[Agent 如何记住用户教的纠正：Self-Learning 闭环](./docs/principle-20260907-self-learning-loop.md)** — 上下文专题·agent 记忆的最小例子（机制讲解，案例 = `minimal-agent-v2-self-learning` 分支）。用户的纠正默认是 session 级临时态，关掉就清零；自学习 = 把临时态转成持久态。闭环四要素：触发器（每 N 轮，`session_manager.py:317`）+ 取样器（只取 user/assistant，`self_learning.py:103`）+ 蒸馏器（反思提示词 + NOTHING 显式退路，`self_learning.py:26-41`）+ 落盘器（标准 `name/SKILL.md` 复用 V2 已有 SkillRegistry 扫描契约）。零记忆模块——靠文件系统做持久化。
-
-### hermes 科普系列（wiki/）
-
-> 把 Hermes 的机制讲成大白话，文章在 `wiki/` 目录（与 docs/ 的深文分开）。
-
-- [Hermes 的多张脸：一个大脑，四种皮肤](./wiki/popular-20260902-hermes-multi-surface.md) — 科普系列·第一篇。同一个 `/ss` 在 CLI 打印、TUI 弹窗、飞书回话之谜：大脑（agent core，无界面）与四张脸（CLI/TUI/Desktop/Gateway）分离；config.yaml 全局共享、命令表统一注册但各端自由实现；会话按 source 盖章隔离（cron/feishu/cli/tui）——顺带解开"CLI 里 /ss 看不到飞书会话"的困惑。
-- （规划）`/ss` 别名移植全过程：从 kimi issue #3158 到 Hermes 三张脸（第一篇文末已预告）
+> 本仓库的调研笔记 / 原理讲解 / 业界剖析已全部迁出，统一沉淀在姊妹仓 **[hermes-agent-stories](https://github.com/notfresh/hermes-agent-stories)**。
+>
+> 主题分类：
+> - **agent 原理系列**（principle-*.md）：Agent 的基本概念与机制
+> - **上下文专题**（thinking-*.md / design-*.md / analysis-*.md / review-*.md）：搜索 / RAG / agent 记忆
+> - **元认知系列**（`什么是架构.md`）：怎么看代码
+> - **hermes 科普系列**（popular-*.md）：Hermes 机制讲成大白话
